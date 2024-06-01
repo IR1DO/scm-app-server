@@ -1,0 +1,29 @@
+{
+  "editor.tokenColorCustomizations": {
+    "[One Monokai]": {
+      "textMateRules": [
+        {
+          "scope": "variable.other.readwrite.cs",
+          "settings": {
+            "foreground": "#F8F8F2"
+          }
+        },
+        {
+          "scope": "entity.name.variable.local.cs",
+          "settings": {
+            "foreground": "#F8F8F2"
+          }
+        },
+        {
+          "scope": "entity.name.variable.field.cs",
+          "settings": {
+            "foreground": "#F8F8F2"
+          }
+        }
+      ]
+    },
+    "comments": "",
+    "textMateRules": []
+  },
+  "cSpell.words": ["cloudinary"]
+}
