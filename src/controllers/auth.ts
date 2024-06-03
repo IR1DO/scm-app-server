@@ -299,7 +299,7 @@ export const updateProfile: RequestHandler = async (req, res) => {
 
   const { name } = req.body;
 
-  if (typeof name !== 'string' || name.trim().length < 3) {
+  if (typeof name !== 'string' || name.trim().length <= 0) {
     return sendErrorRes(res, 'Invalid name.', 422);
   }
 
