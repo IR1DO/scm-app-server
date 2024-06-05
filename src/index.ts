@@ -7,7 +7,8 @@ import productRouter from './routes/product';
 import { sendErrorRes } from './utils/helper';
 import http from 'http';
 import { Server } from 'socket.io';
-import { JsonWebTokenError, TokenExpiredError, verify } from 'jsonwebtoken';
+import { TokenExpiredError, verify } from 'jsonwebtoken';
+import morgan from 'morgan';
 
 const app = express();
 const server = http.createServer(app);
@@ -15,6 +16,7 @@ const io = new Server(server, {
   path: '/socket-message',
 });
 
+app.use(morgan('dev'));
 app.use(express.static('src/public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -32,7 +34,6 @@ io.use((socket, next) => {
 
   try {
     socket.data.jwtDecode = verify(socketReq.token, process.env.JWT_SECRET!);
-    console.log('socket.data.jwtDecode: ', socket.data.jwtDecode);
   } catch (error) {
     if (error instanceof TokenExpiredError) {
       return next(new Error('Session expired.'));
@@ -44,6 +45,7 @@ io.use((socket, next) => {
   next();
 });
 io.on('connection', (socket) => {
+  console.log(socket.data);
   console.log('user is connected.');
 });
 
