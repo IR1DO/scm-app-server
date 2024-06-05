@@ -5,11 +5,17 @@ import express from 'express';
 import authRouter from 'routes/auth';
 import productRouter from './routes/product';
 import { sendErrorRes } from './utils/helper';
+import http from 'http';
+import { Server } from 'socket.io';
+import { JsonWebTokenError, TokenExpiredError, verify } from 'jsonwebtoken';
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  path: '/socket-message',
+});
 
 app.use(express.static('src/public'));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -17,27 +23,38 @@ app.use(express.urlencoded({ extended: false }));
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
 
-/* FIXME This is how you can upload files
-app.post('/upload-file', async (req, res) => {
-  const form = formidable({
-    uploadDir: path.join(__dirname, 'public'),
-    filename(name, ext, part, form) {
-      return Date.now() + '_' + part.originalFilename;
-    },
-  });
-  await form.parse(req);
-  res.send('ok');
+// Socket IO
+io.use((socket, next) => {
+  const socketReq = socket.handshake.auth as { token: string } | undefined;
+  if (!socketReq?.token) {
+    return next(new Error('Unauthorized request.'));
+  }
+
+  try {
+    socket.data.jwtDecode = verify(socketReq.token, process.env.JWT_SECRET!);
+    console.log('socket.data.jwtDecode: ', socket.data.jwtDecode);
+  } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      return next(new Error('Session expired.'));
+    }
+
+    return next(new Error('Invalid token.'));
+  }
+
+  next();
 });
-*/
+io.on('connection', (socket) => {
+  console.log('user is connected.');
+});
 
 app.use(function (err, req, res, next) {
   res.status(500).json({ message: err.message });
 } as express.ErrorRequestHandler);
 
 app.use('*', (req, res) => {
-  sendErrorRes(res, 'Not Found', 404);
+  sendErrorRes(res, 'Page Not Found', 404);
 });
 
-app.listen(8000, () => {
+server.listen(8000, () => {
   console.log('The app is running on http://localhost:8000');
 });
