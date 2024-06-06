@@ -10,6 +10,8 @@ import { Server } from 'socket.io';
 import { TokenExpiredError, verify } from 'jsonwebtoken';
 import morgan from 'morgan';
 import conversationRouter from './routes/conversation';
+import { IncomingMessage, OutgoingMessageResponse } from './utils/types';
+import ConversationModel from './models/conversation';
 
 const app = express();
 const server = http.createServer(app);
@@ -53,11 +55,26 @@ io.on('connection', (socket) => {
 
   socket.join(userId);
 
-  socket.on('chat:new', (data) => {
-    // socket
-    //   .to(data.to)
-    //   .emit('chat:message', { message: 'This is from node server.' });
-    console.log(data);
+  socket.on('chat:new', async (data: IncomingMessage) => {
+    const { message, to, conversationId } = data;
+
+    await ConversationModel.findByIdAndUpdate(conversationId, {
+      $push: {
+        chats: {
+          sentBy: message.user.id,
+          content: message.text,
+          timestamp: message.time, // mongoose will handle the cast from iso_string to date
+        },
+      },
+    });
+
+    const messageResponse: OutgoingMessageResponse = {
+      message,
+      from: message.user,
+      conversationId,
+    };
+
+    socket.to(to).emit('chat:message', messageResponse);
   });
 });
 
