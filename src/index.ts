@@ -9,6 +9,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import { TokenExpiredError, verify } from 'jsonwebtoken';
 import morgan from 'morgan';
+import conversationRouter from './routes/conversation';
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: false }));
 // API Routes
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
+app.use('/conversation', conversationRouter);
 
 // Socket IO
 io.use((socket, next) => {
