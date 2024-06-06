@@ -46,9 +46,19 @@ io.use((socket, next) => {
 
   next();
 });
+
 io.on('connection', (socket) => {
-  console.log(socket.data);
-  console.log('user is connected.');
+  const socketData = socket.data as { jwtDecode: { id: string } };
+  const userId = socketData.jwtDecode.id; // FIXME ?why so verbose?
+
+  socket.join(userId);
+
+  socket.on('chat:new', (data) => {
+    // socket
+    //   .to(data.to)
+    //   .emit('chat:message', { message: 'This is from node server.' });
+    console.log(data);
+  });
 });
 
 app.use(function (err, req, res, next) {
