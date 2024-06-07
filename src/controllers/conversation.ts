@@ -84,3 +84,74 @@ export const getConversation: RequestHandler = async (req, res) => {
 
   res.json({ conversation: finalConversation });
 };
+
+export const getLastChats: RequestHandler = async (req, res) => {
+  const chats = await ConversationModel.aggregate([
+    {
+      $match: {
+        participants: req.user.id,
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'participants',
+        foreignField: '_id',
+        as: 'participantsInfo',
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        id: '$_id',
+        participants: {
+          $filter: {
+            input: '$participantsInfo',
+            as: 'participant',
+            cond: { $ne: ['$$participant._id', req.user.id] },
+          },
+        },
+        lastChat: {
+          $slice: ['$chats', -1],
+        },
+        unreadChatCounts: {
+          $size: {
+            $filter: {
+              input: '$chats',
+              as: 'chat',
+              cond: {
+                $and: [
+                  { $eq: ['$$chat.viewed', false] },
+                  {
+                    $ne: ['$$chat.sentBy', req.user.id],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $unwind: '$participants',
+    },
+    {
+      $unwind: '$lastChat',
+    },
+    {
+      $project: {
+        id: '$id',
+        lastMessage: '$lastChat.content',
+        timestamp: '$lastChat.timestamp',
+        unreadChatCounts: '$unreadChatCounts',
+        peerProfile: {
+          id: '$participants._id',
+          name: '$participants.name',
+          avatar: '$participants.avatar.url',
+        },
+      },
+    },
+  ]);
+
+  res.json({ chats });
+};
