@@ -4,6 +4,11 @@ import { isValidObjectId } from 'mongoose';
 import ConversationModel from 'src/models/conversation';
 import UserModel from 'src/models/user';
 import { sendErrorRes } from 'src/utils/helper';
+import {
+  Conversation,
+  PopulatedChat,
+  PopulatedParticipant,
+} from 'src/utils/types';
 
 export const getOrCreateConversation: RequestHandler = async (req, res) => {
   const { peerId } = req.params;
@@ -32,4 +37,50 @@ export const getOrCreateConversation: RequestHandler = async (req, res) => {
   );
 
   res.json({ conversationId: conversation._id });
+};
+
+export const getConversation: RequestHandler = async (req, res) => {
+  const { conversationId } = req.params;
+
+  if (!isValidObjectId(conversationId)) {
+    return sendErrorRes(res, 'Invalid conversation id.', 422);
+  }
+
+  const conversation = await ConversationModel.findById(conversationId)
+    .populate<{ chats: PopulatedChat[] }>({
+      path: 'chats.sentBy',
+      select: 'name avatar.url',
+    })
+    .populate<{ participants: PopulatedParticipant[] }>({
+      path: 'participants',
+      match: { _id: { $ne: req.user.id } },
+      select: 'name avatar.url',
+    })
+    .select('sentBy chats._id chats.content chats.timestamp participants');
+  if (!conversation) {
+    return sendErrorRes(res, 'Details not found.', 404);
+  }
+
+  const peerProfile = conversation.participants[0];
+
+  const finalConversation: Conversation = {
+    id: conversation._id,
+    chats: conversation.chats.map((chat) => ({
+      id: chat._id.toString(),
+      text: chat.content,
+      time: chat.timestamp.toISOString(),
+      user: {
+        id: chat.sentBy._id.toString(),
+        name: chat.sentBy.name,
+        avatar: chat.sentBy.avatar?.url,
+      },
+    })),
+    peerProfile: {
+      id: peerProfile._id.toString(),
+      name: peerProfile.name,
+      avatar: peerProfile.avatar?.url,
+    },
+  };
+
+  res.json({ conversation: finalConversation });
 };
