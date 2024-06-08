@@ -1,4 +1,3 @@
-import { isValid } from 'date-fns';
 import { RequestHandler } from 'express';
 import { isValidObjectId } from 'mongoose';
 import ConversationModel from 'src/models/conversation';
@@ -154,4 +153,24 @@ export const getLastChats: RequestHandler = async (req, res) => {
   ]);
 
   res.json({ chats });
+};
+
+export const updateChatSeenStatus: RequestHandler = async (req, res) => {
+  const { conversationId, peerId } = req.params;
+
+  if (!isValidObjectId(conversationId) || !isValidObjectId(peerId)) {
+    return sendErrorRes(res, 'Invalid conversation or peer id.', 422);
+  }
+
+  await ConversationModel.findByIdAndUpdate(
+    conversationId,
+    {
+      $set: {
+        'chats.$[elem].viewed': true,
+      },
+    },
+    { arrayFilters: [{ 'elem.sentBy': peerId }] }
+  );
+
+  res.json({ message: 'Updated successfully.' });
 };
