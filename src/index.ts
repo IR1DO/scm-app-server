@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
   const userId = socketData.jwtDecode.id; // FIXME ?why so verbose?
 
   socket.join(userId);
+  console.log('Joiner: ', userId); // DEBUG
 
   socket.on('chat:new', async (data: IncomingMessage) => {
     const { message, to, conversationId } = data;
